@@ -1,0 +1,8 @@
+{
+  "navigationStyle": "custom",
+  "navigationBarTitleText": "GRACER PDA",
+  "usingComponents": {
+    "confirm-dialog": "../../components/pda/ConfirmDialog",
+    "home-panel": "../../components/pda/HomePanel"
+  }
+}

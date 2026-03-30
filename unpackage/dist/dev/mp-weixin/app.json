@@ -1,0 +1,15 @@
+{
+  "pages": [
+    "pages/index/index",
+    "pages/login/index",
+    "pages/scale-binding/index"
+  ],
+  "window": {
+    "navigationStyle": "custom",
+    "navigationBarTextStyle": "black",
+    "navigationBarTitleText": "GRACER PDA",
+    "navigationBarBackgroundColor": "#EEF3F8",
+    "backgroundColor": "#EEF3F8"
+  },
+  "usingComponents": {}
+}

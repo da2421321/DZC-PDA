@@ -1,0 +1,28 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="800" height="420" viewBox="0 0 800 420" fill="none">
+  <defs>
+    <linearGradient id="bg" x1="72" y1="38" x2="719" y2="372" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#0F172A"/>
+      <stop offset="0.55" stop-color="#1D4ED8"/>
+      <stop offset="1" stop-color="#38BDF8"/>
+    </linearGradient>
+    <linearGradient id="card" x1="162" y1="88" x2="555" y2="308" gradientUnits="userSpaceOnUse">
+      <stop stop-color="white" stop-opacity="0.28"/>
+      <stop offset="1" stop-color="white" stop-opacity="0.08"/>
+    </linearGradient>
+  </defs>
+  <rect width="800" height="420" rx="36" fill="url(#bg)"/>
+  <circle cx="689" cy="89" r="118" fill="white" fill-opacity="0.08"/>
+  <circle cx="116" cy="355" r="144" fill="white" fill-opacity="0.08"/>
+  <rect x="122" y="74" width="556" height="270" rx="32" fill="url(#card)" stroke="white" stroke-opacity="0.18"/>
+  <rect x="166" y="116" width="132" height="176" rx="22" fill="white" fill-opacity="0.16"/>
+  <rect x="190" y="142" width="84" height="10" rx="5" fill="white" fill-opacity="0.85"/>
+  <rect x="190" y="164" width="84" height="10" rx="5" fill="white" fill-opacity="0.48"/>
+  <rect x="190" y="198" width="84" height="70" rx="14" fill="white" fill-opacity="0.22"/>
+  <rect x="334" y="134" width="228" height="16" rx="8" fill="white" fill-opacity="0.9"/>
+  <rect x="334" y="168" width="194" height="14" rx="7" fill="white" fill-opacity="0.52"/>
+  <rect x="334" y="200" width="144" height="14" rx="7" fill="white" fill-opacity="0.52"/>
+  <rect x="334" y="246" width="122" height="42" rx="21" fill="white" fill-opacity="0.9"/>
+  <rect x="470" y="246" width="92" height="42" rx="21" fill="white" fill-opacity="0.2"/>
+  <text x="334" y="280" fill="#0F172A" font-family="Arial, Helvetica, sans-serif" font-size="18" font-weight="700">PDA</text>
+  <text x="122" y="47" fill="white" font-family="Arial, Helvetica, sans-serif" font-size="22" font-weight="700" letter-spacing="2">GRACER</text>
+</svg>

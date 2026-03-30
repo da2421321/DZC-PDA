@@ -1,0 +1,70 @@
+
+.overlay.data-v-c594b69b {
+	position: fixed;
+	inset: 0;
+	z-index: 50;
+}
+.dialog.data-v-c594b69b {
+	background: rgba(15, 23, 42, 0.46);
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	padding: 0 36rpx;
+	box-sizing: border-box;
+}
+.dialog-card.data-v-c594b69b {
+	width: 100%;
+	border-radius: 30rpx;
+	background: #ffffff;
+	padding: 36rpx 30rpx 28rpx;
+	box-sizing: border-box;
+	box-shadow: 0 24rpx 60rpx rgba(15, 23, 42, 0.2);
+}
+.dialog-title.data-v-c594b69b {
+	display: block;
+	font-size: 30rpx;
+	font-weight: 700;
+	color: #0f172a;
+	text-align: center;
+	margin-bottom: 14rpx;
+}
+.dialog-message.data-v-c594b69b {
+	display: block;
+	font-size: 24rpx;
+	line-height: 1.6;
+	color: #475569;
+	text-align: center;
+	margin-bottom: 28rpx;
+}
+.dialog-actions.data-v-c594b69b {
+	display: flex;
+	gap: 16rpx;
+}
+.dialog-btn.data-v-c594b69b {
+	flex: 1;
+	height: 84rpx;
+	border-radius: 22rpx;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+}
+.dialog-btn.cancel.data-v-c594b69b {
+	background: #f1f5f9;
+}
+.dialog-btn.confirm.data-v-c594b69b {
+	background: #1d4ed8;
+}
+.dialog-btn.confirm.danger.data-v-c594b69b {
+	background: #ef4444;
+}
+.dialog-cancel-text.data-v-c594b69b,
+.dialog-confirm-text.data-v-c594b69b {
+	font-size: 26rpx;
+	font-weight: 700;
+}
+.dialog-cancel-text.data-v-c594b69b {
+	color: #475569;
+}
+.dialog-confirm-text.data-v-c594b69b {
+	color: #ffffff;
+}

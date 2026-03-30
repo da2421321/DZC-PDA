@@ -1,0 +1,1 @@
+<view class="page"><home-panel wx:if="{{c}}" bindlogout="{{a}}" bindselectModule="{{b}}" u-i="d00eed16-0" bind:__l="__l" u-p="{{c}}"/><confirm-dialog wx:if="{{d}}" bindclose="{{e}}" bindconfirm="{{f}}" u-i="d00eed16-1" bind:__l="__l" u-p="{{g}}"/></view>

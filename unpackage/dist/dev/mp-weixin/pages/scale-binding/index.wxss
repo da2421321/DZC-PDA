@@ -1,0 +1,22 @@
+
+page {
+	background: #eef3f8;
+	color: #0f172a;
+	font-family: 'PingFang SC', 'Microsoft YaHei', sans-serif;
+}
+.page {
+	min-height: 100vh;
+	background: linear-gradient(180deg, #f7fbff 0%, #eef3f8 38%, #e7edf5 100%);
+	position: relative;
+}
+.scan-capture-input {
+	position: fixed;
+	left: -2000rpx;
+	bottom: 0;
+	width: 10rpx;
+	height: 10rpx;
+	opacity: 0;
+	pointer-events: none;
+	caret-color: transparent;
+	z-index: -1;
+}
