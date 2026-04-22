@@ -91,7 +91,17 @@ export function saveSavedAccounts(accounts) {
 }
 
 export function getAuthAccount() {
-	return uni.getStorageSync(AUTH_ACCOUNT_KEY) || ''
+	const account = uni.getStorageSync(AUTH_ACCOUNT_KEY)
+	if (account) {
+		return account
+	}
+
+	const userInfo = uni.getStorageSync('userInfo')
+	if (userInfo && typeof userInfo === 'object') {
+		return userInfo.account || userInfo.username || ''
+	}
+
+	return ''
 }
 
 export function setAuthAccount(account) {
@@ -100,9 +110,16 @@ export function setAuthAccount(account) {
 
 export function clearAuthAccount() {
 	uni.removeStorageSync(AUTH_ACCOUNT_KEY)
+	uni.removeStorageSync('token')
+	uni.removeStorageSync('userInfo')
 }
 
 export function getCurrentUserName(account) {
+	const userInfo = uni.getStorageSync('userInfo')
+	if (userInfo && typeof userInfo === 'object' && userInfo.name) {
+		return userInfo.name
+	}
+
 	return nameMap[account] || (account ? account.split('@')[0] : '张三')
 }
 

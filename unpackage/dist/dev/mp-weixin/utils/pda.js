@@ -1,6 +1,5 @@
 "use strict";
 const common_vendor = require("../common/vendor.js");
-const loginHero = "/static/images/product-placeholder.jpg";
 const factories = [
   { id: "factory-a", name: "一号厂区" },
   { id: "factory-b", name: "二号厂区" }
@@ -20,12 +19,7 @@ const nameMap = {
   "user@gracer.com": "李四"
 };
 const AUTH_ACCOUNT_KEY = "gracer_auth_account";
-const SAVED_ACCOUNTS_KEY = "gracer_saved_accounts";
 const BINDING_RECORDS_KEY = "gracer_scale_binding_records";
-const defaultSavedAccounts = [
-  { account: "admin@gracer.com", password: "gracer123" },
-  { account: "user@gracer.com", password: "user123" }
-];
 const defaultBindingRecords = [
   {
     id: "1",
@@ -71,26 +65,30 @@ const defaultBindingRecords = [
 function cloneList(list) {
   return list.map((item) => ({ ...item }));
 }
-function getSavedAccounts() {
-  const accounts = common_vendor.index.getStorageSync(SAVED_ACCOUNTS_KEY);
-  if (Array.isArray(accounts)) {
-    return cloneList(accounts);
-  }
-  return cloneList(defaultSavedAccounts);
-}
-function saveSavedAccounts(accounts) {
-  common_vendor.index.setStorageSync(SAVED_ACCOUNTS_KEY, accounts);
-}
 function getAuthAccount() {
-  return common_vendor.index.getStorageSync(AUTH_ACCOUNT_KEY) || "";
+  const account = common_vendor.index.getStorageSync(AUTH_ACCOUNT_KEY);
+  if (account) {
+    return account;
+  }
+  const userInfo = common_vendor.index.getStorageSync("userInfo");
+  if (userInfo && typeof userInfo === "object") {
+    return userInfo.account || userInfo.username || "";
+  }
+  return "";
 }
 function setAuthAccount(account) {
   common_vendor.index.setStorageSync(AUTH_ACCOUNT_KEY, account);
 }
 function clearAuthAccount() {
   common_vendor.index.removeStorageSync(AUTH_ACCOUNT_KEY);
+  common_vendor.index.removeStorageSync("token");
+  common_vendor.index.removeStorageSync("userInfo");
 }
 function getCurrentUserName(account) {
+  const userInfo = common_vendor.index.getStorageSync("userInfo");
+  if (userInfo && typeof userInfo === "object" && userInfo.name) {
+    return userInfo.name;
+  }
   return nameMap[account] || (account ? account.split("@")[0] : "张三");
 }
 function getBindingRecords() {
@@ -127,11 +125,8 @@ exports.formatDateTime = formatDateTime;
 exports.getAuthAccount = getAuthAccount;
 exports.getBindingRecords = getBindingRecords;
 exports.getCurrentUserName = getCurrentUserName;
-exports.getSavedAccounts = getSavedAccounts;
 exports.lineMap = lineMap;
-exports.loginHero = loginHero;
 exports.normalizeMac = normalizeMac;
 exports.saveBindingRecords = saveBindingRecords;
-exports.saveSavedAccounts = saveSavedAccounts;
 exports.setAuthAccount = setAuthAccount;
 //# sourceMappingURL=../../.sourcemap/mp-weixin/utils/pda.js.map

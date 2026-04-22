@@ -4,7 +4,7 @@
 			:top-offset="topOffset"
 			:binding-step="bindingStep"
 			:binding-page-title="bindingPageTitle"
-			:factories="factories"
+			:factories="factoryOptions"
 			:current-factory-name="currentFactoryName"
 			:line-options="lineOptions"
 			:current-line-name="currentLineName"
@@ -55,19 +55,21 @@
 <script setup>
 import { computed, reactive, ref } from 'vue'
 import { onHide, onLoad, onShow, onUnload } from '@dcloudio/uni-app'
-import ConfirmDialog from '../../components/pda/ConfirmDialog.vue'
-import ScaleBindingFlow from '../../components/pda/ScaleBindingFlow.vue'
+import { getFactoryOptions } from '@/api/electronic-scale'
+import ConfirmDialog from '@/components/pda/ConfirmDialog.vue'
+import ScaleBindingFlow from '@/components/pda/ScaleBindingFlow.vue'
 import {
-	factories,
+	factories as defaultFactories,
 	formatDateTime,
 	getAuthAccount,
 	getBindingRecords,
 	lineMap,
 	normalizeMac,
 	saveBindingRecords
-} from '../../utils/pda'
+} from '@/utils/pda'
 
 const bindingStep = ref('factory')
+const factoryOptions = ref(defaultFactories)
 const selectedFactory = ref('')
 const selectedLine = ref('')
 const positionCode = ref('')
@@ -90,7 +92,7 @@ const confirmDialog = reactive({
 
 const topOffset = 0
 const lineOptions = computed(() => lineMap[selectedFactory.value] || [])
-const currentFactoryName = computed(() => (factories.find((item) => item.id === selectedFactory.value) || {}).name || '')
+const currentFactoryName = computed(() => (factoryOptions.value.find((item) => item.id === selectedFactory.value) || {}).name || '')
 const currentLineName = computed(() => (lineOptions.value.find((item) => item.id === selectedLine.value) || {}).name || '')
 const bindingPageTitle = computed(() => {
 	if (bindingStep.value === 'factory') return '\u9009\u62e9\u5382\u533a'
@@ -112,6 +114,7 @@ onShow(() => {
 		return
 	}
 	records.value = getBindingRecords()
+	loadFactoryOptions()
 	if (bindingStep.value === 'workspace') {
 		restoreScanFocus()
 	}
@@ -133,6 +136,58 @@ function showToast(title) {
 		icon: 'none',
 		duration: 1500
 	})
+}
+
+function extractFactoryList(source, depth = 0) {
+	if (!source || depth > 4) return null
+	if (Array.isArray(source)) return source
+	if (typeof source !== 'object') return null
+
+	const keys = ['data', 'records', 'rows', 'list', 'options']
+	for (const key of keys) {
+		const nested = extractFactoryList(source[key], depth + 1)
+		if (nested) return nested
+	}
+
+	return null
+}
+
+function normalizeFactoryOptions(response) {
+	const list = extractFactoryList(response)
+	if (!list) return null
+
+	return list
+		.map((item) => {
+			if (typeof item !== 'object' || item === null) {
+				return {
+					id: String(item),
+					name: String(item)
+				}
+			}
+
+			const id = item.id ?? item.value ?? item.factoryId ?? item.factoryCode ?? item.code ?? item.key
+			const name = item.name ?? item.label ?? item.factoryName ?? item.text ?? item.title ?? id
+			if (id === undefined || id === null) return null
+
+			return {
+				...item,
+				id: String(id),
+				name: String(name)
+			}
+		})
+		.filter(Boolean)
+}
+
+async function loadFactoryOptions() {
+	try {
+		const response = await getFactoryOptions()
+		const options = normalizeFactoryOptions(response)
+		if (options) {
+			factoryOptions.value = options
+		}
+	} catch (error) {
+		factoryOptions.value = defaultFactories
+	}
 }
 
 function restoreScanFocus(delay = 120) {

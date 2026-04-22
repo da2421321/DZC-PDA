@@ -68,16 +68,16 @@ const _sfc_main = {
     }
     return (_ctx, _cache) => {
       return common_vendor.e({
-        a: common_vendor.o(promptLogout),
-        b: common_vendor.o(handleModuleSelect),
+        a: common_vendor.o(promptLogout, "04"),
+        b: common_vendor.o(handleModuleSelect, "04"),
         c: common_vendor.p({
           ["current-user-name"]: currentUserName.value,
           modules: homeModules
         }),
         d: confirmDialog.visible
       }, confirmDialog.visible ? {
-        e: common_vendor.o(closeConfirmDialog),
-        f: common_vendor.o(handleConfirmLogout),
+        e: common_vendor.o(closeConfirmDialog, "55"),
+        f: common_vendor.o(handleConfirmLogout, "f0"),
         g: common_vendor.p({
           title: confirmDialog.title,
           message: confirmDialog.message,

@@ -22,9 +22,9 @@
 <script setup>
 import { reactive, ref } from 'vue'
 import { onShow } from '@dcloudio/uni-app'
-import ConfirmDialog from '../../components/pda/ConfirmDialog.vue'
-import HomePanel from '../../components/pda/HomePanel.vue'
-import { clearAuthAccount, getAuthAccount, getCurrentUserName } from '../../utils/pda'
+import ConfirmDialog from '@/components/pda/ConfirmDialog.vue'
+import HomePanel from '@/components/pda/HomePanel.vue'
+import { clearAuthAccount, getAuthAccount, getCurrentUserName } from '@/utils/pda'
 
 const logoutTitle = '\u9000\u51fa\u767b\u5f55'
 const logoutMessage = '\u786e\u5b9a\u8981\u9000\u51fa\u5f53\u524d\u8d26\u53f7\u5417\uff1f'

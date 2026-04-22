@@ -36,7 +36,7 @@ const _sfc_main = {
           color: "#64748b",
           size: "22"
         }),
-        e: common_vendor.o(($event) => emit("logout")),
+        e: common_vendor.o(($event) => emit("logout"), "46"),
         f: common_vendor.f(__props.modules, (item, k0, i0) => {
           return common_vendor.e({
             a: item.iconType

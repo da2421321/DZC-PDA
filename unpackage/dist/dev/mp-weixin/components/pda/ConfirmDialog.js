@@ -27,10 +27,10 @@ const _sfc_main = {
       return {
         a: common_vendor.t(__props.title),
         b: common_vendor.t(__props.message),
-        c: common_vendor.o(($event) => emit("close")),
+        c: common_vendor.o(($event) => emit("close"), "10"),
         d: common_vendor.t(__props.confirmText),
         e: common_vendor.n(__props.danger ? "danger" : ""),
-        f: common_vendor.o(($event) => emit("confirm"))
+        f: common_vendor.o(($event) => emit("confirm"), "4f")
       };
     };
   }

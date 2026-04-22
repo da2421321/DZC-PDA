@@ -89,7 +89,7 @@ const _sfc_main = {
           color: "#475569",
           size: "30"
         }),
-        b: common_vendor.o(($event) => emit("back")),
+        b: common_vendor.o(($event) => emit("back"), "25"),
         c: common_vendor.t(__props.bindingPageTitle),
         d: __props.bindingStep === "factory"
       }, __props.bindingStep === "factory" ? {
@@ -136,24 +136,24 @@ const _sfc_main = {
       } : common_vendor.e({
         m: common_vendor.t(__props.currentFactoryName),
         n: common_vendor.t(__props.currentLineName),
-        o: common_vendor.o(($event) => emit("switch-line")),
+        o: common_vendor.o(($event) => emit("switch-line"), "6c"),
         p: __props.positionCode,
-        q: common_vendor.o(($event) => emit("update-position", $event)),
-        r: common_vendor.o(($event) => emit("activate-scan-target", "position")),
-        s: common_vendor.o(($event) => emit("open-scanner", "position")),
+        q: common_vendor.o(($event) => emit("update-position", $event), "0e"),
+        r: common_vendor.o(($event) => emit("activate-scan-target", "position"), "e3"),
+        s: common_vendor.o(($event) => emit("open-scanner", "position"), "ac"),
         t: common_vendor.n(__props.scanTarget === "position" ? "active" : ""),
         v: __props.scannedPositionData
       }, __props.scannedPositionData ? {
         w: common_vendor.t(__props.scannedPositionData.variety)
       } : {}, {
         x: __props.macCode,
-        y: common_vendor.o(($event) => emit("update-mac", $event)),
-        z: common_vendor.o(($event) => emit("activate-scan-target", "mac")),
-        A: common_vendor.o(($event) => emit("open-scanner", "mac")),
+        y: common_vendor.o(($event) => emit("update-mac", $event), "36"),
+        z: common_vendor.o(($event) => emit("activate-scan-target", "mac"), "3a"),
+        A: common_vendor.o(($event) => emit("open-scanner", "mac"), "dc"),
         B: common_vendor.n(__props.scanTarget === "mac" ? "active" : ""),
         C: common_vendor.t(__props.scanTarget === "mac" ? "MAC 输入框" : "位置输入框"),
         D: common_vendor.n(__props.canBind ? "" : "disabled"),
-        E: common_vendor.o(($event) => emit("confirm-bind")),
+        E: common_vendor.o(($event) => emit("confirm-bind"), "bf"),
         F: common_vendor.t(__props.workspaceRecords.length),
         G: __props.workspaceRecords.length
       }, __props.workspaceRecords.length ? {

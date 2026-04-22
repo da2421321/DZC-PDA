@@ -1,5 +1,6 @@
 "use strict";
 const common_vendor = require("../../common/vendor.js");
+const api_electronicScale = require("../../api/electronic-scale.js");
 const utils_pda = require("../../utils/pda.js");
 if (!Math) {
   (ScaleBindingFlow + ConfirmDialog)();
@@ -11,6 +12,7 @@ const _sfc_main = {
   __name: "index",
   setup(__props) {
     const bindingStep = common_vendor.ref("factory");
+    const factoryOptions = common_vendor.ref(utils_pda.factories);
     const selectedFactory = common_vendor.ref("");
     const selectedLine = common_vendor.ref("");
     const positionCode = common_vendor.ref("");
@@ -30,7 +32,7 @@ const _sfc_main = {
       payload: ""
     });
     const lineOptions = common_vendor.computed(() => utils_pda.lineMap[selectedFactory.value] || []);
-    const currentFactoryName = common_vendor.computed(() => (utils_pda.factories.find((item) => item.id === selectedFactory.value) || {}).name || "");
+    const currentFactoryName = common_vendor.computed(() => (factoryOptions.value.find((item) => item.id === selectedFactory.value) || {}).name || "");
     const currentLineName = common_vendor.computed(() => (lineOptions.value.find((item) => item.id === selectedLine.value) || {}).name || "");
     const bindingPageTitle = common_vendor.computed(() => {
       if (bindingStep.value === "factory")
@@ -52,6 +54,7 @@ const _sfc_main = {
         return;
       }
       records.value = utils_pda.getBindingRecords();
+      loadFactoryOptions();
       if (bindingStep.value === "workspace") {
         restoreScanFocus();
       }
@@ -71,6 +74,54 @@ const _sfc_main = {
         icon: "none",
         duration: 1500
       });
+    }
+    function extractFactoryList(source, depth = 0) {
+      if (!source || depth > 4)
+        return null;
+      if (Array.isArray(source))
+        return source;
+      if (typeof source !== "object")
+        return null;
+      const keys = ["data", "records", "rows", "list", "options"];
+      for (const key of keys) {
+        const nested = extractFactoryList(source[key], depth + 1);
+        if (nested)
+          return nested;
+      }
+      return null;
+    }
+    function normalizeFactoryOptions(response) {
+      const list = extractFactoryList(response);
+      if (!list)
+        return null;
+      return list.map((item) => {
+        if (typeof item !== "object" || item === null) {
+          return {
+            id: String(item),
+            name: String(item)
+          };
+        }
+        const id = item.id ?? item.value ?? item.factoryId ?? item.factoryCode ?? item.code ?? item.key;
+        const name = item.name ?? item.label ?? item.factoryName ?? item.text ?? item.title ?? id;
+        if (id === void 0 || id === null)
+          return null;
+        return {
+          ...item,
+          id: String(id),
+          name: String(name)
+        };
+      }).filter(Boolean);
+    }
+    async function loadFactoryOptions() {
+      try {
+        const response = await api_electronicScale.getFactoryOptions();
+        const options = normalizeFactoryOptions(response);
+        if (options) {
+          factoryOptions.value = options;
+        }
+      } catch (error) {
+        factoryOptions.value = utils_pda.factories;
+      }
     }
     function restoreScanFocus(delay = 120) {
       if (bindingStep.value !== "workspace")
@@ -283,21 +334,21 @@ const _sfc_main = {
     });
     return (_ctx, _cache) => {
       return common_vendor.e({
-        a: common_vendor.o(handleBindingBack),
-        b: common_vendor.o(selectFactory),
-        c: common_vendor.o(selectLine),
-        d: common_vendor.o(switchLine),
-        e: common_vendor.o(handlePositionInput),
-        f: common_vendor.o(handleMacInput),
-        g: common_vendor.o(activateScanTarget),
-        h: common_vendor.o(openScanner),
-        i: common_vendor.o(confirmBind),
-        j: common_vendor.o(promptUnbind),
+        a: common_vendor.o(handleBindingBack, "d1"),
+        b: common_vendor.o(selectFactory, "9c"),
+        c: common_vendor.o(selectLine, "dd"),
+        d: common_vendor.o(switchLine, "6b"),
+        e: common_vendor.o(handlePositionInput, "95"),
+        f: common_vendor.o(handleMacInput, "aa"),
+        g: common_vendor.o(activateScanTarget, "93"),
+        h: common_vendor.o(openScanner, "7c"),
+        i: common_vendor.o(confirmBind, "2c"),
+        j: common_vendor.o(promptUnbind, "7d"),
         k: common_vendor.p({
           ["top-offset"]: topOffset,
           ["binding-step"]: bindingStep.value,
           ["binding-page-title"]: bindingPageTitle.value,
-          factories: common_vendor.unref(utils_pda.factories),
+          factories: factoryOptions.value,
           ["current-factory-name"]: currentFactoryName.value,
           ["line-options"]: lineOptions.value,
           ["current-line-name"]: currentLineName.value,
@@ -309,14 +360,14 @@ const _sfc_main = {
           ["workspace-records"]: workspaceRecords.value
         }),
         l: scanInputFocus.value,
-        m: common_vendor.o(handleScanBlur),
-        n: common_vendor.o([($event) => scanInputValue.value = $event.detail.value, handleScanInput]),
-        o: common_vendor.o(handleScanConfirm),
+        m: common_vendor.o(handleScanBlur, "a0"),
+        n: common_vendor.o([($event) => scanInputValue.value = $event.detail.value, handleScanInput], "ed"),
+        o: common_vendor.o(handleScanConfirm, "b0"),
         p: scanInputValue.value,
         q: confirmDialog.visible
       }, confirmDialog.visible ? {
-        r: common_vendor.o(closeConfirmDialog),
-        s: common_vendor.o(handleConfirmDialog),
+        r: common_vendor.o(closeConfirmDialog, "5d"),
+        s: common_vendor.o(handleConfirmDialog, "56"),
         t: common_vendor.p({
           title: confirmDialog.title,
           message: confirmDialog.message,
