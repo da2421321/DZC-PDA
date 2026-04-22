@@ -110,7 +110,7 @@ export function getLineOptions(params: LineOptionsParams = {}) {
 export function bindScaleByPosition(data: BindByPositionParams) {
     return request<BindByPositionResponse>({
         url: '/electronic-scale/scale-binding/bind-by-position',
-        method: 'post',
+        method: 'put',
         data
     })
 }
@@ -118,7 +118,7 @@ export function bindScaleByPosition(data: BindByPositionParams) {
 export function unbindScale(data: UnbindScaleParams) {
     return request<UnbindScaleResponse>({
         url: '/electronic-scale/scale-binding/bind',
-        method: 'post',
+        method: 'put',
         data
     })
 }

@@ -16,14 +16,14 @@ function getLineOptions(params = {}) {
 function bindScaleByPosition(data) {
   return request_index.request({
     url: "/electronic-scale/scale-binding/bind-by-position",
-    method: "post",
+    method: "put",
     data
   });
 }
 function unbindScale(data) {
   return request_index.request({
     url: "/electronic-scale/scale-binding/bind",
-    method: "post",
+    method: "put",
     data
   });
 }
