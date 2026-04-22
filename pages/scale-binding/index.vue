@@ -55,21 +55,20 @@
 <script setup>
 import { computed, reactive, ref } from 'vue'
 import { onHide, onLoad, onShow, onUnload } from '@dcloudio/uni-app'
-import { getFactoryOptions } from '@/api/electronic-scale'
+import { bindScaleByPosition, getFactoryOptions, getLineOptions, getSlotsWithBoundDevices, unbindScale } from '@/api/electronic-scale'
 import ConfirmDialog from '@/components/pda/ConfirmDialog.vue'
 import ScaleBindingFlow from '@/components/pda/ScaleBindingFlow.vue'
 import {
 	factories as defaultFactories,
-	formatDateTime,
 	getAuthAccount,
 	getBindingRecords,
 	lineMap,
-	normalizeMac,
-	saveBindingRecords
+	normalizeMac
 } from '@/utils/pda'
 
 const bindingStep = ref('factory')
 const factoryOptions = ref(defaultFactories)
+const lineOptions = ref([])
 const selectedFactory = ref('')
 const selectedLine = ref('')
 const positionCode = ref('')
@@ -78,9 +77,13 @@ const scanTarget = ref('position')
 const scanInputValue = ref('')
 const scanInputFocus = ref(false)
 const scannedPositionData = ref(null)
+const bindingSubmitting = ref(false)
+const unbindingSubmitting = ref(false)
 const records = ref([])
 let focusTimer = null
 let inputTimer = null
+let lineOptionsRequestId = 0
+let boundSlotsRequestId = 0
 
 const confirmDialog = reactive({
 	visible: false,
@@ -91,7 +94,6 @@ const confirmDialog = reactive({
 })
 
 const topOffset = 0
-const lineOptions = computed(() => lineMap[selectedFactory.value] || [])
 const currentFactoryName = computed(() => (factoryOptions.value.find((item) => item.id === selectedFactory.value) || {}).name || '')
 const currentLineName = computed(() => (lineOptions.value.find((item) => item.id === selectedLine.value) || {}).name || '')
 const bindingPageTitle = computed(() => {
@@ -99,7 +101,7 @@ const bindingPageTitle = computed(() => {
 	if (bindingStep.value === 'line') return '\u9009\u62e9\u4ea7\u7ebf'
 	return '\u7535\u5b50\u79e4\u7ed1\u5b9a'
 })
-const canBind = computed(() => !!positionCode.value && !!macCode.value)
+const canBind = computed(() => !!positionCode.value && !!macCode.value && !bindingSubmitting.value)
 const workspaceRecords = computed(() => {
 	return records.value.filter((item) => item.factoryId === selectedFactory.value && item.lineId === selectedLine.value && item.status === 'bound')
 })
@@ -115,7 +117,11 @@ onShow(() => {
 	}
 	records.value = getBindingRecords()
 	loadFactoryOptions()
+	if (selectedFactory.value) {
+		loadLineOptions(selectedFactory.value)
+	}
 	if (bindingStep.value === 'workspace') {
+		loadBoundDeviceSlots()
 		restoreScanFocus()
 	}
 })
@@ -138,22 +144,22 @@ function showToast(title) {
 	})
 }
 
-function extractFactoryList(source, depth = 0) {
+function extractOptionList(source, depth = 0) {
 	if (!source || depth > 4) return null
 	if (Array.isArray(source)) return source
 	if (typeof source !== 'object') return null
 
 	const keys = ['data', 'records', 'rows', 'list', 'options']
 	for (const key of keys) {
-		const nested = extractFactoryList(source[key], depth + 1)
+		const nested = extractOptionList(source[key], depth + 1)
 		if (nested) return nested
 	}
 
 	return null
 }
 
-function normalizeFactoryOptions(response) {
-	const list = extractFactoryList(response)
+function normalizeOptions(response) {
+	const list = extractOptionList(response)
 	if (!list) return null
 
 	return list
@@ -165,8 +171,8 @@ function normalizeFactoryOptions(response) {
 				}
 			}
 
-			const id = item.id ?? item.value ?? item.factoryId ?? item.factoryCode ?? item.code ?? item.key
-			const name = item.name ?? item.label ?? item.factoryName ?? item.text ?? item.title ?? id
+			const id = item.id ?? item.value ?? item.factoryId ?? item.factoryCode ?? item.lineId ?? item.lineCode ?? item.productionLineId ?? item.productionLineCode ?? item.prodLineId ?? item.prodLineCode ?? item.code ?? item.key
+			const name = item.name ?? item.label ?? item.factoryName ?? item.lineName ?? item.productionLineName ?? item.prodLineName ?? item.text ?? item.title ?? id
 			if (id === undefined || id === null) return null
 
 			return {
@@ -181,12 +187,105 @@ function normalizeFactoryOptions(response) {
 async function loadFactoryOptions() {
 	try {
 		const response = await getFactoryOptions()
-		const options = normalizeFactoryOptions(response)
-		if (options) {
+		const options = normalizeOptions(response)
+		if (options !== null) {
 			factoryOptions.value = options
 		}
 	} catch (error) {
 		factoryOptions.value = defaultFactories
+	}
+}
+
+function getFallbackLineOptions(factoryId) {
+	return (lineMap[factoryId] || []).map((item) => ({ ...item }))
+}
+
+async function loadLineOptions(factoryId) {
+	const nextFactoryId = String(factoryId || '')
+	const requestId = ++lineOptionsRequestId
+	if (!nextFactoryId) {
+		lineOptions.value = []
+		return
+	}
+
+	try {
+		const response = await getLineOptions({ factoryId: nextFactoryId })
+		const options = normalizeOptions(response)
+		if (requestId !== lineOptionsRequestId || selectedFactory.value !== nextFactoryId) return
+		lineOptions.value = options !== null ? options : getFallbackLineOptions(nextFactoryId)
+	} catch (error) {
+		if (requestId !== lineOptionsRequestId || selectedFactory.value !== nextFactoryId) return
+		lineOptions.value = getFallbackLineOptions(nextFactoryId)
+	}
+}
+
+function extractBoundDeviceRows(source, depth = 0) {
+	if (!source || depth > 4) return null
+	if (Array.isArray(source)) return source
+	if (typeof source !== 'object') return null
+
+	if (Array.isArray(source.rows)) return source.rows
+
+	const keys = ['data', 'records', 'list']
+	for (const key of keys) {
+		const nested = extractBoundDeviceRows(source[key], depth + 1)
+		if (nested) return nested
+	}
+
+	return null
+}
+
+function normalizeBoundDeviceSlots(response, factoryId, lineId) {
+	const rows = extractBoundDeviceRows(response)
+	if (!rows) return null
+
+	return rows
+		.map((item) => {
+			if (typeof item !== 'object' || item === null) return null
+
+			const slotCode = item.code ?? item.slotCode ?? item.positionCode ?? item.positionId ?? item.id
+			const id = item.id ?? item.slotId ?? slotCode
+			if (id === undefined || id === null) return null
+
+			return {
+				id: String(id),
+				factoryId,
+				lineId,
+				slotId: String(id),
+				positionId: String(slotCode ?? id),
+				positionIndex: item.index,
+				side: item.side,
+				varietyId: item.varietyId,
+				variety: String(item.varietyName ?? item.variety ?? ''),
+				equipmentId: item.equipmentId,
+				deviceCode: item.deviceCode,
+				macAddress: normalizeMac(item.deviceMac ?? item.macAddress ?? ''),
+				deviceMac: item.deviceMac,
+				deviceStatus: item.deviceStatus,
+				isOnline: Boolean(item.isOnline),
+				status: 'bound',
+				bindTime: item.bindTime || ''
+			}
+		})
+		.filter(Boolean)
+}
+
+async function loadBoundDeviceSlots() {
+	const factoryId = selectedFactory.value
+	const lineId = selectedLine.value
+	const requestId = ++boundSlotsRequestId
+	if (!factoryId || !lineId) return
+
+	try {
+		const response = await getSlotsWithBoundDevices({ factoryId, lineId })
+		const nextRecords = normalizeBoundDeviceSlots(response, factoryId, lineId)
+		if (requestId !== boundSlotsRequestId || selectedFactory.value !== factoryId || selectedLine.value !== lineId) return
+		if (nextRecords) {
+			records.value = nextRecords
+		}
+	} catch (error) {
+		if (requestId !== boundSlotsRequestId || selectedFactory.value !== factoryId || selectedLine.value !== lineId) return
+		records.value = getBindingRecords()
 	}
 }
 
@@ -302,14 +401,18 @@ function resetBindingForm() {
 }
 
 function resetBindingFlow() {
+	lineOptionsRequestId += 1
+	boundSlotsRequestId += 1
 	bindingStep.value = 'factory'
 	selectedFactory.value = ''
 	selectedLine.value = ''
+	lineOptions.value = []
 	resetBindingForm()
 }
 
 function handleBindingBack() {
 	if (bindingStep.value === 'workspace') {
+		boundSlotsRequestId += 1
 		bindingStep.value = 'line'
 		selectedLine.value = ''
 		resetBindingForm()
@@ -317,9 +420,12 @@ function handleBindingBack() {
 	}
 
 	if (bindingStep.value === 'line') {
+		lineOptionsRequestId += 1
+		boundSlotsRequestId += 1
 		bindingStep.value = 'factory'
 		selectedFactory.value = ''
 		selectedLine.value = ''
+		lineOptions.value = []
 		return
 	}
 
@@ -334,29 +440,54 @@ function handleBindingBack() {
 	})
 }
 
-function handleConfirmDialog() {
+async function handleConfirmDialog() {
+	if (unbindingSubmitting.value) {
+		return
+	}
+
 	if (confirmDialog.action === 'unbind') {
-		records.value = records.value.filter((item) => item.id !== confirmDialog.payload)
-		saveBindingRecords(records.value)
-		closeConfirmDialog()
-		showToast('\u89e3\u7ed1\u6210\u529f')
+		if (!confirmDialog.payload) {
+			closeConfirmDialog()
+			return
+		}
+
+		unbindingSubmitting.value = true
+		try {
+			await unbindScale({
+				slotId: String(confirmDialog.payload)
+			})
+			closeConfirmDialog()
+			showToast('\u89e3\u7ed1\u6210\u529f')
+			loadBoundDeviceSlots()
+			restoreScanFocus(120)
+		} catch (error) {
+			restoreScanFocus(120)
+		} finally {
+			unbindingSubmitting.value = false
+		}
 	}
 }
 
 function selectFactory(factoryId) {
-	selectedFactory.value = factoryId
+	const nextFactoryId = String(factoryId || '')
+	boundSlotsRequestId += 1
+	selectedFactory.value = nextFactoryId
 	selectedLine.value = ''
+	lineOptions.value = []
 	bindingStep.value = 'line'
+	loadLineOptions(nextFactoryId)
 }
 
 function selectLine(lineId) {
-	selectedLine.value = lineId
+	selectedLine.value = String(lineId || '')
 	bindingStep.value = 'workspace'
 	resetBindingForm()
+	loadBoundDeviceSlots()
 	restoreScanFocus(120)
 }
 
 function switchLine() {
+	boundSlotsRequestId += 1
 	bindingStep.value = 'line'
 	selectedLine.value = ''
 	resetBindingForm()
@@ -377,36 +508,35 @@ function openScanner(target) {
 	activateScanTarget(target)
 }
 
-function confirmBind() {
-	if (!canBind.value) {
+async function confirmBind() {
+	if (bindingSubmitting.value) {
+		return
+	}
+
+	if (!positionCode.value || !macCode.value) {
 		showToast('\u8bf7\u5b8c\u5584\u7ed1\u5b9a\u4fe1\u606f')
 		return
 	}
 
-	const nextRecord = {
-		id: `${Date.now()}`,
-		factoryId: selectedFactory.value,
-		lineId: selectedLine.value,
-		positionId: positionCode.value.trim().toUpperCase(),
-		variety: scannedPositionData.value ? scannedPositionData.value.variety : '\u6df7\u5408\u5e9f\u6599',
-		macAddress: normalizeMac(macCode.value),
-		status: 'bound',
-		bindTime: formatDateTime(new Date())
-	}
-
-	records.value = [nextRecord].concat(
-		records.value.filter((item) => {
-			return !(item.factoryId === selectedFactory.value && item.lineId === selectedLine.value && item.positionId === nextRecord.positionId)
+	bindingSubmitting.value = true
+	try {
+		await bindScaleByPosition({
+			position: positionCode.value.trim().toUpperCase(),
+			deviceMac: normalizeMac(macCode.value)
 		})
-	)
-
-	saveBindingRecords(records.value)
-	resetBindingForm()
-	showToast('\u7ed1\u5b9a\u6210\u529f')
+		resetBindingForm()
+		showToast('\u7ed1\u5b9a\u6210\u529f')
+		loadBoundDeviceSlots()
+		restoreScanFocus(120)
+	} catch (error) {
+		restoreScanFocus(120)
+	} finally {
+		bindingSubmitting.value = false
+	}
 }
 
-function promptUnbind(recordId) {
-	openConfirmDialog('\u89e3\u7ed1\u8bbe\u5907', '\u786e\u5b9a\u8981\u89e3\u7ed1\u8be5\u8bbe\u5907\u5417\uff1f', 'unbind', recordId)
+function promptUnbind(slotId) {
+	openConfirmDialog('\u89e3\u7ed1\u8bbe\u5907', '\u786e\u5b9a\u8981\u89e3\u7ed1\u8be5\u8bbe\u5907\u5417\uff1f', 'unbind', String(slotId || ''))
 }
 
 onHide(() => {

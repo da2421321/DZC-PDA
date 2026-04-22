@@ -13,6 +13,7 @@ const _sfc_main = {
   setup(__props) {
     const bindingStep = common_vendor.ref("factory");
     const factoryOptions = common_vendor.ref(utils_pda.factories);
+    const lineOptions = common_vendor.ref([]);
     const selectedFactory = common_vendor.ref("");
     const selectedLine = common_vendor.ref("");
     const positionCode = common_vendor.ref("");
@@ -21,9 +22,13 @@ const _sfc_main = {
     const scanInputValue = common_vendor.ref("");
     const scanInputFocus = common_vendor.ref(false);
     const scannedPositionData = common_vendor.ref(null);
+    const bindingSubmitting = common_vendor.ref(false);
+    const unbindingSubmitting = common_vendor.ref(false);
     const records = common_vendor.ref([]);
     let focusTimer = null;
     let inputTimer = null;
+    let lineOptionsRequestId = 0;
+    let boundSlotsRequestId = 0;
     const confirmDialog = common_vendor.reactive({
       visible: false,
       title: "",
@@ -31,7 +36,6 @@ const _sfc_main = {
       action: "",
       payload: ""
     });
-    const lineOptions = common_vendor.computed(() => utils_pda.lineMap[selectedFactory.value] || []);
     const currentFactoryName = common_vendor.computed(() => (factoryOptions.value.find((item) => item.id === selectedFactory.value) || {}).name || "");
     const currentLineName = common_vendor.computed(() => (lineOptions.value.find((item) => item.id === selectedLine.value) || {}).name || "");
     const bindingPageTitle = common_vendor.computed(() => {
@@ -41,7 +45,7 @@ const _sfc_main = {
         return "选择产线";
       return "电子秤绑定";
     });
-    const canBind = common_vendor.computed(() => !!positionCode.value && !!macCode.value);
+    const canBind = common_vendor.computed(() => !!positionCode.value && !!macCode.value && !bindingSubmitting.value);
     const workspaceRecords = common_vendor.computed(() => {
       return records.value.filter((item) => item.factoryId === selectedFactory.value && item.lineId === selectedLine.value && item.status === "bound");
     });
@@ -55,7 +59,11 @@ const _sfc_main = {
       }
       records.value = utils_pda.getBindingRecords();
       loadFactoryOptions();
+      if (selectedFactory.value) {
+        loadLineOptions(selectedFactory.value);
+      }
       if (bindingStep.value === "workspace") {
+        loadBoundDeviceSlots();
         restoreScanFocus();
       }
     });
@@ -75,7 +83,7 @@ const _sfc_main = {
         duration: 1500
       });
     }
-    function extractFactoryList(source, depth = 0) {
+    function extractOptionList(source, depth = 0) {
       if (!source || depth > 4)
         return null;
       if (Array.isArray(source))
@@ -84,14 +92,14 @@ const _sfc_main = {
         return null;
       const keys = ["data", "records", "rows", "list", "options"];
       for (const key of keys) {
-        const nested = extractFactoryList(source[key], depth + 1);
+        const nested = extractOptionList(source[key], depth + 1);
         if (nested)
           return nested;
       }
       return null;
     }
-    function normalizeFactoryOptions(response) {
-      const list = extractFactoryList(response);
+    function normalizeOptions(response) {
+      const list = extractOptionList(response);
       if (!list)
         return null;
       return list.map((item) => {
@@ -101,8 +109,8 @@ const _sfc_main = {
             name: String(item)
           };
         }
-        const id = item.id ?? item.value ?? item.factoryId ?? item.factoryCode ?? item.code ?? item.key;
-        const name = item.name ?? item.label ?? item.factoryName ?? item.text ?? item.title ?? id;
+        const id = item.id ?? item.value ?? item.factoryId ?? item.factoryCode ?? item.lineId ?? item.lineCode ?? item.productionLineId ?? item.productionLineCode ?? item.prodLineId ?? item.prodLineCode ?? item.code ?? item.key;
+        const name = item.name ?? item.label ?? item.factoryName ?? item.lineName ?? item.productionLineName ?? item.prodLineName ?? item.text ?? item.title ?? id;
         if (id === void 0 || id === null)
           return null;
         return {
@@ -115,12 +123,103 @@ const _sfc_main = {
     async function loadFactoryOptions() {
       try {
         const response = await api_electronicScale.getFactoryOptions();
-        const options = normalizeFactoryOptions(response);
-        if (options) {
+        const options = normalizeOptions(response);
+        if (options !== null) {
           factoryOptions.value = options;
         }
       } catch (error) {
         factoryOptions.value = utils_pda.factories;
+      }
+    }
+    function getFallbackLineOptions(factoryId) {
+      return (utils_pda.lineMap[factoryId] || []).map((item) => ({ ...item }));
+    }
+    async function loadLineOptions(factoryId) {
+      const nextFactoryId = String(factoryId || "");
+      const requestId = ++lineOptionsRequestId;
+      if (!nextFactoryId) {
+        lineOptions.value = [];
+        return;
+      }
+      try {
+        const response = await api_electronicScale.getLineOptions({ factoryId: nextFactoryId });
+        const options = normalizeOptions(response);
+        if (requestId !== lineOptionsRequestId || selectedFactory.value !== nextFactoryId)
+          return;
+        lineOptions.value = options !== null ? options : getFallbackLineOptions(nextFactoryId);
+      } catch (error) {
+        if (requestId !== lineOptionsRequestId || selectedFactory.value !== nextFactoryId)
+          return;
+        lineOptions.value = getFallbackLineOptions(nextFactoryId);
+      }
+    }
+    function extractBoundDeviceRows(source, depth = 0) {
+      if (!source || depth > 4)
+        return null;
+      if (Array.isArray(source))
+        return source;
+      if (typeof source !== "object")
+        return null;
+      if (Array.isArray(source.rows))
+        return source.rows;
+      const keys = ["data", "records", "list"];
+      for (const key of keys) {
+        const nested = extractBoundDeviceRows(source[key], depth + 1);
+        if (nested)
+          return nested;
+      }
+      return null;
+    }
+    function normalizeBoundDeviceSlots(response, factoryId, lineId) {
+      const rows = extractBoundDeviceRows(response);
+      if (!rows)
+        return null;
+      return rows.map((item) => {
+        if (typeof item !== "object" || item === null)
+          return null;
+        const slotCode = item.code ?? item.slotCode ?? item.positionCode ?? item.positionId ?? item.id;
+        const id = item.id ?? item.slotId ?? slotCode;
+        if (id === void 0 || id === null)
+          return null;
+        return {
+          id: String(id),
+          factoryId,
+          lineId,
+          slotId: String(id),
+          positionId: String(slotCode ?? id),
+          positionIndex: item.index,
+          side: item.side,
+          varietyId: item.varietyId,
+          variety: String(item.varietyName ?? item.variety ?? ""),
+          equipmentId: item.equipmentId,
+          deviceCode: item.deviceCode,
+          macAddress: utils_pda.normalizeMac(item.deviceMac ?? item.macAddress ?? ""),
+          deviceMac: item.deviceMac,
+          deviceStatus: item.deviceStatus,
+          isOnline: Boolean(item.isOnline),
+          status: "bound",
+          bindTime: item.bindTime || ""
+        };
+      }).filter(Boolean);
+    }
+    async function loadBoundDeviceSlots() {
+      const factoryId = selectedFactory.value;
+      const lineId = selectedLine.value;
+      const requestId = ++boundSlotsRequestId;
+      if (!factoryId || !lineId)
+        return;
+      try {
+        const response = await api_electronicScale.getSlotsWithBoundDevices({ factoryId, lineId });
+        const nextRecords = normalizeBoundDeviceSlots(response, factoryId, lineId);
+        if (requestId !== boundSlotsRequestId || selectedFactory.value !== factoryId || selectedLine.value !== lineId)
+          return;
+        if (nextRecords) {
+          records.value = nextRecords;
+        }
+      } catch (error) {
+        if (requestId !== boundSlotsRequestId || selectedFactory.value !== factoryId || selectedLine.value !== lineId)
+          return;
+        records.value = utils_pda.getBindingRecords();
       }
     }
     function restoreScanFocus(delay = 120) {
@@ -228,22 +327,29 @@ const _sfc_main = {
       scanTarget.value = "position";
     }
     function resetBindingFlow() {
+      lineOptionsRequestId += 1;
+      boundSlotsRequestId += 1;
       bindingStep.value = "factory";
       selectedFactory.value = "";
       selectedLine.value = "";
+      lineOptions.value = [];
       resetBindingForm();
     }
     function handleBindingBack() {
       if (bindingStep.value === "workspace") {
+        boundSlotsRequestId += 1;
         bindingStep.value = "line";
         selectedLine.value = "";
         resetBindingForm();
         return;
       }
       if (bindingStep.value === "line") {
+        lineOptionsRequestId += 1;
+        boundSlotsRequestId += 1;
         bindingStep.value = "factory";
         selectedFactory.value = "";
         selectedLine.value = "";
+        lineOptions.value = [];
         return;
       }
       const pages = getCurrentPages();
@@ -255,26 +361,49 @@ const _sfc_main = {
         url: "/pages/index/index"
       });
     }
-    function handleConfirmDialog() {
+    async function handleConfirmDialog() {
+      if (unbindingSubmitting.value) {
+        return;
+      }
       if (confirmDialog.action === "unbind") {
-        records.value = records.value.filter((item) => item.id !== confirmDialog.payload);
-        utils_pda.saveBindingRecords(records.value);
-        closeConfirmDialog();
-        showToast("解绑成功");
+        if (!confirmDialog.payload) {
+          closeConfirmDialog();
+          return;
+        }
+        unbindingSubmitting.value = true;
+        try {
+          await api_electronicScale.unbindScale({
+            slotId: String(confirmDialog.payload)
+          });
+          closeConfirmDialog();
+          showToast("解绑成功");
+          loadBoundDeviceSlots();
+          restoreScanFocus(120);
+        } catch (error) {
+          restoreScanFocus(120);
+        } finally {
+          unbindingSubmitting.value = false;
+        }
       }
     }
     function selectFactory(factoryId) {
-      selectedFactory.value = factoryId;
+      const nextFactoryId = String(factoryId || "");
+      boundSlotsRequestId += 1;
+      selectedFactory.value = nextFactoryId;
       selectedLine.value = "";
+      lineOptions.value = [];
       bindingStep.value = "line";
+      loadLineOptions(nextFactoryId);
     }
     function selectLine(lineId) {
-      selectedLine.value = lineId;
+      selectedLine.value = String(lineId || "");
       bindingStep.value = "workspace";
       resetBindingForm();
+      loadBoundDeviceSlots();
       restoreScanFocus(120);
     }
     function switchLine() {
+      boundSlotsRequestId += 1;
       bindingStep.value = "line";
       selectedLine.value = "";
       resetBindingForm();
@@ -291,32 +420,32 @@ const _sfc_main = {
     function openScanner(target) {
       activateScanTarget(target);
     }
-    function confirmBind() {
-      if (!canBind.value) {
+    async function confirmBind() {
+      if (bindingSubmitting.value) {
+        return;
+      }
+      if (!positionCode.value || !macCode.value) {
         showToast("请完善绑定信息");
         return;
       }
-      const nextRecord = {
-        id: `${Date.now()}`,
-        factoryId: selectedFactory.value,
-        lineId: selectedLine.value,
-        positionId: positionCode.value.trim().toUpperCase(),
-        variety: scannedPositionData.value ? scannedPositionData.value.variety : "混合废料",
-        macAddress: utils_pda.normalizeMac(macCode.value),
-        status: "bound",
-        bindTime: utils_pda.formatDateTime(/* @__PURE__ */ new Date())
-      };
-      records.value = [nextRecord].concat(
-        records.value.filter((item) => {
-          return !(item.factoryId === selectedFactory.value && item.lineId === selectedLine.value && item.positionId === nextRecord.positionId);
-        })
-      );
-      utils_pda.saveBindingRecords(records.value);
-      resetBindingForm();
-      showToast("绑定成功");
+      bindingSubmitting.value = true;
+      try {
+        await api_electronicScale.bindScaleByPosition({
+          position: positionCode.value.trim().toUpperCase(),
+          deviceMac: utils_pda.normalizeMac(macCode.value)
+        });
+        resetBindingForm();
+        showToast("绑定成功");
+        loadBoundDeviceSlots();
+        restoreScanFocus(120);
+      } catch (error) {
+        restoreScanFocus(120);
+      } finally {
+        bindingSubmitting.value = false;
+      }
     }
-    function promptUnbind(recordId) {
-      openConfirmDialog("解绑设备", "确定要解绑该设备吗？", "unbind", recordId);
+    function promptUnbind(slotId) {
+      openConfirmDialog("解绑设备", "确定要解绑该设备吗？", "unbind", String(slotId || ""));
     }
     common_vendor.onHide(() => {
       releaseScanFocus();

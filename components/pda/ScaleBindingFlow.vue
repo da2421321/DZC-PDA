@@ -111,7 +111,7 @@
 								<text class="record-mac">MAC: {{ record.macAddress }}</text>
 								<text class="record-time">{{ formatRecordTime(record.bindTime) }}</text>
 							</view>
-							<view class="danger-btn" @tap="emit('prompt-unbind', record.id)">
+							<view class="danger-btn" @tap="emit('prompt-unbind', record.slotId || record.id)">
 								<text class="danger-btn-text">解绑</text>
 							</view>
 						</view>

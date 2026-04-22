@@ -163,7 +163,7 @@ const _sfc_main = {
             b: common_vendor.t(record.variety),
             c: common_vendor.t(record.macAddress),
             d: common_vendor.t(formatRecordTime(record.bindTime)),
-            e: common_vendor.o(($event) => emit("prompt-unbind", record.id), record.id),
+            e: common_vendor.o(($event) => emit("prompt-unbind", record.slotId || record.id), record.id),
             f: record.id
           };
         })

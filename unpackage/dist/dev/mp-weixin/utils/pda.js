@@ -98,15 +98,6 @@ function getBindingRecords() {
   }
   return cloneList(defaultBindingRecords);
 }
-function saveBindingRecords(records) {
-  common_vendor.index.setStorageSync(BINDING_RECORDS_KEY, records);
-}
-function pad(value) {
-  return value < 10 ? `0${value}` : `${value}`;
-}
-function formatDateTime(date) {
-  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())} ${pad(date.getHours())}:${pad(date.getMinutes())}:${pad(date.getSeconds())}`;
-}
 function normalizeMac(value) {
   const source = String(value).trim().toUpperCase();
   const pure = source.replace(/[^0-9A-F]/g, "");
@@ -121,12 +112,10 @@ function normalizeMac(value) {
 }
 exports.clearAuthAccount = clearAuthAccount;
 exports.factories = factories;
-exports.formatDateTime = formatDateTime;
 exports.getAuthAccount = getAuthAccount;
 exports.getBindingRecords = getBindingRecords;
 exports.getCurrentUserName = getCurrentUserName;
 exports.lineMap = lineMap;
 exports.normalizeMac = normalizeMac;
-exports.saveBindingRecords = saveBindingRecords;
 exports.setAuthAccount = setAuthAccount;
 //# sourceMappingURL=../../.sourcemap/mp-weixin/utils/pda.js.map
