@@ -37,7 +37,7 @@ const homeModules = [
 		id: 'scale-binding',
 		title: '\u7535\u5b50\u79f0\u7ed1\u5b9a',
 		description: '\u7ed1\u5b9a\u7535\u5b50\u79f0\u4e0e\u4f4d\u7f6e',
-		iconType: 'gear-filled',
+		iconPath: '/static/images/icon-scale.svg',
 		theme: 'blue'
 	}
 ]

@@ -21,7 +21,7 @@
 				:class="`card-${item.theme || 'blue'}`"
 				@tap="emit('select-module', item.id)"
 			>
-				<view class="card-icon">
+				<view class="card-icon" :class="{ 'card-icon-image': item.iconPath }">
 					<uni-icons v-if="item.iconType" :type="item.iconType" color="#ffffff" size="30" />
 					<image v-else-if="item.iconPath" class="icon-img" :src="item.iconPath" mode="aspectFit" />
 					<text v-else class="icon-fallback">{{ item.icon }}</text>
@@ -144,9 +144,14 @@ const brandSubtitle = '\u683c\u745e\u54f2\u00b7\u7ec7\u5faa\u73af'
 	margin-bottom: 24rpx;
 }
 
+.card-icon-image {
+	background: linear-gradient(145deg, #5b95ff 0%, #3e7bea 100%);
+	box-shadow: 0 10rpx 20rpx rgba(29, 78, 216, 0.28);
+}
+
 .icon-img {
-	width: 48rpx;
-	height: 48rpx;
+	width: 84rpx;
+	height: 84rpx;
 }
 
 .icon-fallback {

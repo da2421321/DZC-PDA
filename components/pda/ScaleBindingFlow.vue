@@ -393,9 +393,25 @@ function formatRecordTime(value) {
 }
 
 .scan-btn-text {
-	font-size: 24rpx;
-	font-weight: 700;
-	color: #2563eb;
+	display: block;
+	width: 40rpx;
+	height: 40rpx;
+	font-size: 0;
+	line-height: 0;
+	color: transparent;
+	overflow: hidden;
+	background:
+		linear-gradient(#2563eb, #2563eb) left top / 12rpx 4rpx no-repeat,
+		linear-gradient(#2563eb, #2563eb) left top / 4rpx 12rpx no-repeat,
+		linear-gradient(#2563eb, #2563eb) right top / 12rpx 4rpx no-repeat,
+		linear-gradient(#2563eb, #2563eb) right top / 4rpx 12rpx no-repeat,
+		linear-gradient(#2563eb, #2563eb) left bottom / 12rpx 4rpx no-repeat,
+		linear-gradient(#2563eb, #2563eb) left bottom / 4rpx 12rpx no-repeat,
+		linear-gradient(#2563eb, #2563eb) right bottom / 12rpx 4rpx no-repeat,
+		linear-gradient(#2563eb, #2563eb) right bottom / 4rpx 12rpx no-repeat,
+		linear-gradient(#2563eb, #2563eb) 12rpx 18rpx / 4rpx 12rpx no-repeat,
+		linear-gradient(#2563eb, #2563eb) 18rpx 10rpx / 4rpx 20rpx no-repeat,
+		linear-gradient(#2563eb, #2563eb) 24rpx 14rpx / 4rpx 16rpx no-repeat;
 }
 
 .scan-target-tip {

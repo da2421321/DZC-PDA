@@ -53,11 +53,12 @@ const _sfc_main = {
             f: common_vendor.t(item.icon)
           }, {
             d: item.iconPath,
-            g: common_vendor.t(item.title),
-            h: common_vendor.t(item.description),
-            i: item.id,
-            j: common_vendor.n(`card-${item.theme || "blue"}`),
-            k: common_vendor.o(($event) => emit("select-module", item.id), item.id)
+            g: item.iconPath ? 1 : "",
+            h: common_vendor.t(item.title),
+            i: common_vendor.t(item.description),
+            j: item.id,
+            k: common_vendor.n(`card-${item.theme || "blue"}`),
+            l: common_vendor.o(($event) => emit("select-module", item.id), item.id)
           });
         })
       };

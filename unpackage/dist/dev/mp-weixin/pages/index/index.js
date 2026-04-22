@@ -19,7 +19,7 @@ const _sfc_main = {
         id: "scale-binding",
         title: "电子称绑定",
         description: "绑定电子称与位置",
-        iconType: "gear-filled",
+        iconPath: "/static/images/icon-scale.svg",
         theme: "blue"
       }
     ];

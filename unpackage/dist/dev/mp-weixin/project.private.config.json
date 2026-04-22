@@ -3,5 +3,18 @@
     "projectname": "DZC-PDA",
     "setting": {
         "compileHotReLoad": true
+    },
+    "condition": {
+        "miniprogram": {
+            "list": [
+                {
+                    "name": "pages/scale-binding/index",
+                    "pathName": "pages/scale-binding/index",
+                    "query": "",
+                    "scene": null,
+                    "launchMode": "default"
+                }
+            ]
+        }
     }
 }
