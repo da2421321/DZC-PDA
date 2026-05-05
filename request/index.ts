@@ -1,5 +1,5 @@
 // 全局请求封装
-const env = 1// 0生产 1开发
+const env = 0// 0生产 1开发
 //http://192.168.1.23:8096
 //https://gracer.hainiu.biz/api
 const urlList = ['https://www.hhcarbonr.com/api', 'https://gracer.hainiu.biz/api']

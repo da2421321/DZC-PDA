@@ -1,8 +1,0 @@
-{
-  "navigationStyle": "custom",
-  "navigationBarTitleText": "电子称绑定",
-  "usingComponents": {
-    "confirm-dialog": "../../components/pda/ConfirmDialog",
-    "scale-binding-flow": "../../components/pda/ScaleBindingFlow"
-  }
-}

@@ -57,14 +57,11 @@
 				<view class="form-item">
 					<text class="label">1. 扫描位置</text>
 					<view :class="['scan-row', scanTarget === 'position' ? 'active' : '']">
-						<input
-							class="scan-input"
-							:value="positionCode"
-							placeholder="扫描位置二维码"
-							placeholder-class="placeholder"
-							@input="emit('update-position', $event)"
-							@focus="emit('activate-scan-target', 'position')"
-						/>
+						<view class="scan-input" @tap="emit('activate-scan-target', 'position')">
+							<text :class="['scan-input-text', positionCode ? '' : 'scan-input-placeholder']">
+								{{ positionCode || '扫描位置二维码' }}
+							</text>
+						</view>
 						<view class="scan-btn" @tap="emit('open-scanner', 'position')">
 							<text class="scan-btn-text">扫码</text>
 						</view>
@@ -75,16 +72,13 @@
 				</view>
 
 				<view class="form-item">
-					<text class="label">2. 扫描电子称</text>
+					<text class="label">2. 扫描电子秤</text>
 					<view :class="['scan-row', scanTarget === 'mac' ? 'active' : '']">
-						<input
-							class="scan-input"
-							:value="macCode"
-							placeholder="扫描设备二维码"
-							placeholder-class="placeholder"
-							@input="emit('update-mac', $event)"
-							@focus="emit('activate-scan-target', 'mac')"
-						/>
+						<view class="scan-input" @tap="emit('activate-scan-target', 'mac')">
+							<text :class="['scan-input-text', macCode ? '' : 'scan-input-placeholder']">
+								{{ macCode || '扫描设备二维码' }}
+							</text>
+						</view>
 						<view class="scan-btn" @tap="emit('open-scanner', 'mac')">
 							<text class="scan-btn-text">扫码</text>
 						</view>
@@ -92,7 +86,9 @@
 				</view>
 
 				<view class="scan-target-tip">
-					<text class="scan-target-tip-text">当前扫码目标：{{ scanTarget === 'mac' ? 'MAC 输入框' : '位置输入框' }}</text>
+					<text class="scan-target-tip-text">
+						当前扫码目标：{{ scanTarget === 'mac' ? 'MAC 输入框' : '位置输入框' }}
+					</text>
 				</view>
 
 				<view :class="['primary-btn', canBind ? '' : 'disabled']" @tap="emit('confirm-bind')">
@@ -100,7 +96,7 @@
 				</view>
 
 				<view class="records">
-					<text class="records-title">已绑定设备 ({{ workspaceRecords.length }})</text>
+					<text class="records-title">已绑定设备({{ workspaceRecords.length }})</text>
 					<view v-if="workspaceRecords.length">
 						<view v-for="record in workspaceRecords" :key="record.id" class="record-card">
 							<view class="record-main">
@@ -186,8 +182,6 @@ const emit = defineEmits([
 	'select-factory',
 	'select-line',
 	'switch-line',
-	'update-position',
-	'update-mac',
 	'activate-scan-target',
 	'open-scanner',
 	'confirm-bind',
@@ -369,15 +363,25 @@ function formatRecordTime(value) {
 	flex: 1;
 	height: 88rpx;
 	border-radius: 24rpx;
+	border: 2rpx solid transparent;
 	background: rgba(255, 255, 255, 0.96);
 	box-shadow: 0 12rpx 32rpx rgba(148, 163, 184, 0.1);
 	padding: 0 24rpx;
 	box-sizing: border-box;
-	font-size: 28rpx;
-	color: #0f172a;
+	display: flex;
+	align-items: center;
+	overflow: hidden;
 }
 
-.placeholder {
+.scan-input-text {
+	font-size: 28rpx;
+	color: #0f172a;
+	white-space: nowrap;
+	text-overflow: ellipsis;
+	overflow: hidden;
+}
+
+.scan-input-placeholder {
 	color: #94a3b8;
 }
 

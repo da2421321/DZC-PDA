@@ -18,8 +18,6 @@
 			@select-factory="selectFactory"
 			@select-line="selectLine"
 			@switch-line="switchLine"
-			@update-position="handlePositionInput"
-			@update-mac="handleMacInput"
 			@activate-scan-target="activateScanTarget"
 			@open-scanner="openScanner"
 			@confirm-bind="confirmBind"
@@ -491,17 +489,6 @@ function switchLine() {
 	bindingStep.value = 'line'
 	selectedLine.value = ''
 	resetBindingForm()
-}
-
-function handlePositionInput(event) {
-	activateScanTarget('position')
-	positionCode.value = event.detail.value.toUpperCase()
-	scannedPositionData.value = null
-}
-
-function handleMacInput(event) {
-	activateScanTarget('mac')
-	macCode.value = event.detail.value.toUpperCase()
 }
 
 function openScanner(target) {
