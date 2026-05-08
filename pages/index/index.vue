@@ -39,6 +39,13 @@ const homeModules = [
 		description: '\u7ed1\u5b9a\u7535\u5b50\u79f0\u4e0e\u4f4d\u7f6e',
 		iconPath: '/static/images/icon-scale.svg',
 		theme: 'blue'
+	},
+	{
+		id: 'scale-unbinding',
+		title: '\u7535\u5b50\u79f0\u89e3\u7ed1',
+		description: '\u89e3\u7ed1\u5df2\u7ed1\u5b9a\u8bbe\u5907',
+		iconPath: '/static/images/icon-scale.svg',
+		theme: 'orange'
 	}
 ]
 
@@ -88,7 +95,14 @@ function handleConfirmLogout() {
 function handleModuleSelect(moduleId) {
 	if (moduleId === 'scale-binding') {
 		uni.navigateTo({
-			url: '/pages/scale-binding/index'
+			url: '/pages/scale-binding/index?mode=bind'
+		})
+		return
+	}
+
+	if (moduleId === 'scale-unbinding') {
+		uni.navigateTo({
+			url: '/pages/scale-binding/index?mode=unbind'
 		})
 	}
 }
