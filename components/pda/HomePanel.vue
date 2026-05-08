@@ -181,4 +181,13 @@ const brandSubtitle = '\u683c\u745e\u54f2\u00b7\u7ec7\u5faa\u73af'
 .card-blue {
 	background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
 }
+
+.card-orange {
+	background: linear-gradient(135deg, #f97316 0%, #ea580c 100%);
+}
+
+.card-orange .card-icon-image {
+	background: linear-gradient(145deg, #fb923c 0%, #c2410c 100%);
+	box-shadow: 0 10rpx 20rpx rgba(194, 65, 12, 0.28);
+}
 </style>

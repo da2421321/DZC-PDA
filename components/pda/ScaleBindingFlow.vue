@@ -48,21 +48,22 @@
 		</view>
 
 		<view v-else class="workspace">
-			<view class="workspace-bar">
+			<view v-if="showWorkspaceSelector" class="workspace-bar">
 				<text class="workspace-text">{{ currentFactoryName }} / {{ currentLineName }}</text>
 				<text class="workspace-switch" @tap="emit('switch-line')">切换</text>
 			</view>
 
-			<scroll-view class="workspace-scroll" scroll-y="true">
-				<view class="form-item">
+			<scroll-view class="workspace-scroll" scroll-y="true" :show-scrollbar="false">
+				<view class="workspace-scroll-inner">
+				<view v-if="showBindingForm" class="form-item">
 					<text class="label">1. 扫描位置</text>
 					<view :class="['scan-row', scanTarget === 'position' ? 'active' : '']">
-						<view class="scan-input" @tap="emit('activate-scan-target', 'position')">
+						<view class="scan-input" @tap="selectScanTarget('position')">
 							<text :class="['scan-input-text', positionCode ? '' : 'scan-input-placeholder']">
 								{{ positionCode || '扫描位置二维码' }}
 							</text>
 						</view>
-						<view class="scan-btn" @tap="emit('open-scanner', 'position')">
+						<view class="scan-btn" @tap="selectScanTarget('position')">
 							<text class="scan-btn-text">扫码</text>
 						</view>
 					</view>
@@ -71,27 +72,27 @@
 					</view>
 				</view>
 
-				<view class="form-item">
+				<view v-if="showBindingForm" class="form-item">
 					<text class="label">2. 扫描电子秤</text>
 					<view :class="['scan-row', scanTarget === 'mac' ? 'active' : '']">
-						<view class="scan-input" @tap="emit('activate-scan-target', 'mac')">
+						<view class="scan-input" @tap="selectScanTarget('mac')">
 							<text :class="['scan-input-text', macCode ? '' : 'scan-input-placeholder']">
 								{{ macCode || '扫描设备二维码' }}
 							</text>
 						</view>
-						<view class="scan-btn" @tap="emit('open-scanner', 'mac')">
+						<view class="scan-btn" @tap="selectScanTarget('mac')">
 							<text class="scan-btn-text">扫码</text>
 						</view>
 					</view>
 				</view>
 
-				<view class="scan-target-tip">
+				<view v-if="showBindingForm" class="scan-target-tip">
 					<text class="scan-target-tip-text">
 						当前扫码目标：{{ scanTarget === 'mac' ? 'MAC 输入框' : '位置输入框' }}
 					</text>
 				</view>
 
-				<view :class="['primary-btn', canBind ? '' : 'disabled']" @tap="emit('confirm-bind')">
+				<view v-if="showBindingForm" :class="['primary-btn', canBind ? '' : 'disabled']" @tap="emit('confirm-bind')">
 					<text class="primary-btn-text">确认绑定</text>
 				</view>
 
@@ -115,6 +116,7 @@
 					<view v-else class="empty">
 						<text class="empty-text">该产线暂无绑定记录</text>
 					</view>
+				</view>
 				</view>
 			</scroll-view>
 		</view>
@@ -151,6 +153,14 @@ defineProps({
 		type: String,
 		default: ''
 	},
+	showWorkspaceSelector: {
+		type: Boolean,
+		default: true
+	},
+	showBindingForm: {
+		type: Boolean,
+		default: true
+	},
 	positionCode: {
 		type: String,
 		default: ''
@@ -183,10 +193,13 @@ const emit = defineEmits([
 	'select-line',
 	'switch-line',
 	'activate-scan-target',
-	'open-scanner',
 	'confirm-bind',
 	'prompt-unbind'
 ])
+
+function selectScanTarget(target) {
+	emit('activate-scan-target', target)
+}
 
 function formatRecordTime(value) {
 	const parts = String(value).split(' ')
@@ -331,8 +344,23 @@ function formatRecordTime(value) {
 .workspace-scroll {
 	flex: 1;
 	height: 0;
+	width: 100%;
+	box-sizing: border-box;
+	scrollbar-width: none;
+	-ms-overflow-style: none;
+}
+
+.workspace-scroll-inner {
+	min-height: 100%;
 	padding: 26rpx 24rpx 28rpx;
 	box-sizing: border-box;
+}
+
+.workspace-scroll::-webkit-scrollbar,
+.workspace-scroll :deep(.uni-scroll-view::-webkit-scrollbar) {
+	width: 0;
+	height: 0;
+	display: none;
 }
 
 .form-item {

@@ -1,5 +1,20 @@
 <template>
 	<view class="page">
+		<input
+			ref="scanInputRef"
+			v-model="scanInputValue"
+			class="hidden-scan-input"
+			type="text"
+			:focus="scanInputFocus"
+			:adjust-position="false"
+			:hold-keyboard="false"
+			inputmode="none"
+			:show-keyboard="false"
+			@blur="handleScanBlur"
+			@input="handleScanInput"
+			@confirm="handleScanConfirm"
+		/>
+
 		<ScaleBindingFlow
 			:top-offset="topOffset"
 			:binding-step="bindingStep"
@@ -8,6 +23,8 @@
 			:current-factory-name="currentFactoryName"
 			:line-options="lineOptions"
 			:current-line-name="currentLineName"
+			:show-workspace-selector="!skipFactoryLineSelection"
+			:show-binding-form="!isUnbindMode"
 			:position-code="positionCode"
 			:mac-code="macCode"
 			:scan-target="scanTarget"
@@ -19,23 +36,8 @@
 			@select-line="selectLine"
 			@switch-line="switchLine"
 			@activate-scan-target="activateScanTarget"
-			@open-scanner="openScanner"
 			@confirm-bind="confirmBind"
 			@prompt-unbind="promptUnbind"
-		/>
-
-		<input
-			v-model="scanInputValue"
-			class="scan-capture-input"
-			type="text"
-			:focus="scanInputFocus"
-			:adjust-position="false"
-			:hold-keyboard="false"
-			inputmode="none"
-			:show-keyboard="false"
-			@blur="handleScanBlur"
-			@input="handleScanInput"
-			@confirm="handleScanConfirm"
 		/>
 
 		<ConfirmDialog
@@ -51,7 +53,7 @@
 </template>
 
 <script setup>
-import { computed, reactive, ref } from 'vue'
+import { computed, nextTick, reactive, ref, watch } from 'vue'
 import { onHide, onLoad, onShow, onUnload } from '@dcloudio/uni-app'
 import { bindScaleByPosition, getFactoryOptions, getLineOptions, getSlotsWithBoundDevices, unbindScale } from '@/api/electronic-scale'
 import ConfirmDialog from '@/components/pda/ConfirmDialog.vue'
@@ -64,7 +66,10 @@ import {
 	normalizeMac
 } from '@/utils/pda'
 
-const bindingStep = ref('factory')
+const pageMode = ref('bind')
+const isUnbindMode = computed(() => pageMode.value === 'unbind')
+const skipFactoryLineSelection = computed(() => !isUnbindMode.value)
+const bindingStep = ref('workspace')
 const factoryOptions = ref(defaultFactories)
 const lineOptions = ref([])
 const selectedFactory = ref('')
@@ -74,14 +79,15 @@ const macCode = ref('')
 const scanTarget = ref('position')
 const scanInputValue = ref('')
 const scanInputFocus = ref(false)
+const scanInputRef = ref(null)
 const scannedPositionData = ref(null)
 const bindingSubmitting = ref(false)
 const unbindingSubmitting = ref(false)
 const records = ref([])
-let focusTimer = null
-let inputTimer = null
 let lineOptionsRequestId = 0
 let boundSlotsRequestId = 0
+let scanFocusTimer = null
+let scanInputTimer = null
 
 const confirmDialog = reactive({
 	visible: false,
@@ -97,15 +103,27 @@ const currentLineName = computed(() => (lineOptions.value.find((item) => item.id
 const bindingPageTitle = computed(() => {
 	if (bindingStep.value === 'factory') return '\u9009\u62e9\u5382\u533a'
 	if (bindingStep.value === 'line') return '\u9009\u62e9\u4ea7\u7ebf'
+	if (isUnbindMode.value) return '\u7535\u5b50\u79e4\u89e3\u7ed1'
 	return '\u7535\u5b50\u79e4\u7ed1\u5b9a'
 })
 const canBind = computed(() => !!positionCode.value && !!macCode.value && !bindingSubmitting.value)
+const scanInputEnabled = computed(() => !isUnbindMode.value && bindingStep.value === 'workspace')
 const workspaceRecords = computed(() => {
 	return records.value.filter((item) => item.factoryId === selectedFactory.value && item.lineId === selectedLine.value && item.status === 'bound')
 })
 const confirmButtonText = computed(() => (confirmDialog.action === 'unbind' ? '\u786e\u8ba4\u89e3\u7ed1' : '\u786e\u8ba4'))
 
-onLoad(() => {
+watch(scanInputEnabled, (enabled) => {
+	if (enabled) {
+		restoreScanFocus()
+		return
+	}
+
+	pauseScanInput()
+}, { immediate: true })
+
+onLoad((options = {}) => {
+	pageMode.value = options.mode === 'unbind' ? 'unbind' : 'bind'
 	resetBindingFlow()
 })
 
@@ -120,8 +138,16 @@ onShow(() => {
 	}
 	if (bindingStep.value === 'workspace') {
 		loadBoundDeviceSlots()
-		restoreScanFocus()
 	}
+	restoreScanFocus()
+})
+
+onHide(() => {
+	pauseScanInput()
+})
+
+onUnload(() => {
+	pauseScanInput()
 })
 
 function ensureAuth() {
@@ -139,6 +165,15 @@ function showToast(title) {
 		title,
 		icon: 'none',
 		duration: 1500
+	})
+}
+
+function showBindSuccessModal() {
+	uni.showModal({
+		title: '\u63d0\u793a',
+		content: '\u7ed1\u5b9a\u6210\u529f',
+		showCancel: false,
+		confirmText: '\u77e5\u9053\u4e86'
 	})
 }
 
@@ -287,47 +322,78 @@ async function loadBoundDeviceSlots() {
 	}
 }
 
-function restoreScanFocus(delay = 120) {
-	if (bindingStep.value !== 'workspace') return
-	if (focusTimer) {
-		clearTimeout(focusTimer)
-		focusTimer = null
-	}
-	focusTimer = setTimeout(() => {
-		scanInputFocus.value = true
-	}, delay)
-}
-
-function releaseScanFocus() {
-	scanInputFocus.value = false
-	if (focusTimer) {
-		clearTimeout(focusTimer)
-		focusTimer = null
-	}
-}
-
 function activateScanTarget(target) {
 	if (target !== 'position' && target !== 'mac') return
 	scanTarget.value = target
-	restoreScanFocus(60)
+	restoreScanFocus(80)
+}
+
+function clearScanFocusTimer() {
+	if (scanFocusTimer) {
+		clearTimeout(scanFocusTimer)
+		scanFocusTimer = null
+	}
+}
+
+function clearScanInputTimer() {
+	if (scanInputTimer) {
+		clearTimeout(scanInputTimer)
+		scanInputTimer = null
+	}
+}
+
+function restoreScanFocus(delay = 200) {
+	clearScanFocusTimer()
+	if (!scanInputEnabled.value) {
+		scanInputFocus.value = false
+		return
+	}
+
+	scanFocusTimer = setTimeout(() => {
+		scanFocusTimer = null
+		if (!scanInputEnabled.value) return
+
+		scanInputFocus.value = false
+		nextTick(() => {
+			if (scanInputEnabled.value) {
+				scanInputFocus.value = true
+			}
+		})
+	}, delay)
+}
+
+function pauseScanInput() {
+	clearScanFocusTimer()
+	clearScanInputTimer()
+	scanInputValue.value = ''
+	scanInputFocus.value = false
 }
 
 function handleScanBlur() {
 	scanInputFocus.value = false
-	restoreScanFocus(200)
+	restoreScanFocus(300)
 }
 
 function handleScanInput() {
-	if (bindingStep.value !== 'workspace') return
-	if (inputTimer) {
-		clearTimeout(inputTimer)
-		inputTimer = null
-	}
-	inputTimer = setTimeout(() => {
+	if (!scanInputEnabled.value) return
+
+	clearScanInputTimer()
+	scanInputTimer = setTimeout(() => {
 		if (scanInputValue.value.trim()) {
 			handleScanConfirm()
 		}
-	}, 120)
+	}, 300)
+}
+
+function handleScanConfirm() {
+	clearScanInputTimer()
+
+	const rawValue = scanInputValue.value.trim()
+	scanInputValue.value = ''
+	if (!rawValue || !scanInputEnabled.value) return
+
+	applyScanValue(rawValue)
+	restoreScanFocus()
 }
 
 function parseScanData(rawData) {
@@ -354,19 +420,8 @@ function applyScanValue(rawValue) {
 
 	positionCode.value = parsedValue
 	scannedPositionData.value = null
+	scanTarget.value = 'mac'
 	showToast('\u4f4d\u7f6e\u626b\u7801\u6210\u529f')
-}
-
-function handleScanConfirm() {
-	if (inputTimer) {
-		clearTimeout(inputTimer)
-		inputTimer = null
-	}
-	const rawValue = scanInputValue.value.trim()
-	scanInputValue.value = ''
-	if (!rawValue || bindingStep.value !== 'workspace') return
-	applyScanValue(rawValue)
-	restoreScanFocus(80)
 }
 
 function openConfirmDialog(title, message, action, payload = '') {
@@ -386,30 +441,41 @@ function closeConfirmDialog() {
 }
 
 function resetBindingForm() {
-	releaseScanFocus()
-	if (inputTimer) {
-		clearTimeout(inputTimer)
-		inputTimer = null
-	}
 	positionCode.value = ''
 	macCode.value = ''
 	scannedPositionData.value = null
-	scanInputValue.value = ''
 	scanTarget.value = 'position'
 }
 
 function resetBindingFlow() {
 	lineOptionsRequestId += 1
 	boundSlotsRequestId += 1
-	bindingStep.value = 'factory'
+	bindingStep.value = skipFactoryLineSelection.value ? 'workspace' : 'factory'
 	selectedFactory.value = ''
 	selectedLine.value = ''
 	lineOptions.value = []
 	resetBindingForm()
 }
 
+function leaveBindingPage() {
+	const pages = getCurrentPages()
+	if (pages.length > 1) {
+		uni.navigateBack()
+		return
+	}
+
+	uni.reLaunch({
+		url: '/pages/index/index'
+	})
+}
+
 function handleBindingBack() {
 	if (bindingStep.value === 'workspace') {
+		if (skipFactoryLineSelection.value) {
+			leaveBindingPage()
+			return
+		}
+
 		boundSlotsRequestId += 1
 		bindingStep.value = 'line'
 		selectedLine.value = ''
@@ -427,15 +493,7 @@ function handleBindingBack() {
 		return
 	}
 
-	const pages = getCurrentPages()
-	if (pages.length > 1) {
-		uni.navigateBack()
-		return
-	}
-
-	uni.reLaunch({
-		url: '/pages/index/index'
-	})
+	leaveBindingPage()
 }
 
 async function handleConfirmDialog() {
@@ -457,9 +515,8 @@ async function handleConfirmDialog() {
 			closeConfirmDialog()
 			showToast('\u89e3\u7ed1\u6210\u529f')
 			loadBoundDeviceSlots()
-			restoreScanFocus(120)
-		} catch (error) {
-			restoreScanFocus(120)
+		} catch {
+			// 接口层已统一提示错误，这里只负责恢复提交状态。
 		} finally {
 			unbindingSubmitting.value = false
 		}
@@ -481,7 +538,6 @@ function selectLine(lineId) {
 	bindingStep.value = 'workspace'
 	resetBindingForm()
 	loadBoundDeviceSlots()
-	restoreScanFocus(120)
 }
 
 function switchLine() {
@@ -491,11 +547,11 @@ function switchLine() {
 	resetBindingForm()
 }
 
-function openScanner(target) {
-	activateScanTarget(target)
-}
-
 async function confirmBind() {
+	if (isUnbindMode.value) {
+		return
+	}
+
 	if (bindingSubmitting.value) {
 		return
 	}
@@ -512,11 +568,10 @@ async function confirmBind() {
 			deviceMac: normalizeMac(macCode.value)
 		})
 		resetBindingForm()
-		showToast('\u7ed1\u5b9a\u6210\u529f')
+		showBindSuccessModal()
 		loadBoundDeviceSlots()
-		restoreScanFocus(120)
-	} catch (error) {
-		restoreScanFocus(120)
+	} catch {
+		// 接口层已统一提示错误，这里只负责恢复提交状态。
 	} finally {
 		bindingSubmitting.value = false
 	}
@@ -525,22 +580,6 @@ async function confirmBind() {
 function promptUnbind(slotId) {
 	openConfirmDialog('\u89e3\u7ed1\u8bbe\u5907', '\u786e\u5b9a\u8981\u89e3\u7ed1\u8be5\u8bbe\u5907\u5417\uff1f', 'unbind', String(slotId || ''))
 }
-
-onHide(() => {
-	releaseScanFocus()
-	if (inputTimer) {
-		clearTimeout(inputTimer)
-		inputTimer = null
-	}
-})
-
-onUnload(() => {
-	releaseScanFocus()
-	if (inputTimer) {
-		clearTimeout(inputTimer)
-		inputTimer = null
-	}
-})
 </script>
 
 <style>
@@ -556,16 +595,16 @@ page {
 	position: relative;
 }
 
-.scan-capture-input {
+.hidden-scan-input {
 	position: fixed;
-	left: -2000rpx;
 	bottom: 0;
+	left: -2000rpx;
 	width: 10rpx;
 	height: 10rpx;
+	z-index: -1;
 	opacity: 0;
 	pointer-events: none;
 	caret-color: transparent;
-	z-index: -1;
 }
 </style>
 
