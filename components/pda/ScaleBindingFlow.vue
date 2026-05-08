@@ -58,12 +58,12 @@
 				<view v-if="showBindingForm" class="form-item">
 					<text class="label">1. 扫描位置</text>
 					<view :class="['scan-row', scanTarget === 'position' ? 'active' : '']">
-						<view class="scan-input" @tap="emit('open-scanner', 'position')">
+						<view class="scan-input" @tap="selectScanTarget('position')">
 							<text :class="['scan-input-text', positionCode ? '' : 'scan-input-placeholder']">
 								{{ positionCode || '扫描位置二维码' }}
 							</text>
 						</view>
-						<view class="scan-btn" @tap="emit('open-scanner', 'position')">
+						<view class="scan-btn" @tap="selectScanTarget('position')">
 							<text class="scan-btn-text">扫码</text>
 						</view>
 					</view>
@@ -75,12 +75,12 @@
 				<view v-if="showBindingForm" class="form-item">
 					<text class="label">2. 扫描电子秤</text>
 					<view :class="['scan-row', scanTarget === 'mac' ? 'active' : '']">
-						<view class="scan-input" @tap="emit('open-scanner', 'mac')">
+						<view class="scan-input" @tap="selectScanTarget('mac')">
 							<text :class="['scan-input-text', macCode ? '' : 'scan-input-placeholder']">
 								{{ macCode || '扫描设备二维码' }}
 							</text>
 						</view>
-						<view class="scan-btn" @tap="emit('open-scanner', 'mac')">
+						<view class="scan-btn" @tap="selectScanTarget('mac')">
 							<text class="scan-btn-text">扫码</text>
 						</view>
 					</view>
@@ -193,10 +193,13 @@ const emit = defineEmits([
 	'select-line',
 	'switch-line',
 	'activate-scan-target',
-	'open-scanner',
 	'confirm-bind',
 	'prompt-unbind'
 ])
+
+function selectScanTarget(target) {
+	emit('activate-scan-target', target)
+}
 
 function formatRecordTime(value) {
 	const parts = String(value).split(' ')

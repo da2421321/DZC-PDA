@@ -1,5 +1,20 @@
 <template>
 	<view class="page">
+		<input
+			ref="scanInputRef"
+			v-model="scanInputValue"
+			class="hidden-scan-input"
+			type="text"
+			:focus="scanInputFocus"
+			:adjust-position="false"
+			:hold-keyboard="false"
+			inputmode="none"
+			:show-keyboard="false"
+			@blur="handleScanBlur"
+			@input="handleScanInput"
+			@confirm="handleScanConfirm"
+		/>
+
 		<ScaleBindingFlow
 			:top-offset="topOffset"
 			:binding-step="bindingStep"
@@ -21,7 +36,6 @@
 			@select-line="selectLine"
 			@switch-line="switchLine"
 			@activate-scan-target="activateScanTarget"
-			@open-scanner="openScanner"
 			@confirm-bind="confirmBind"
 			@prompt-unbind="promptUnbind"
 		/>
@@ -39,8 +53,8 @@
 </template>
 
 <script setup>
-import { computed, reactive, ref } from 'vue'
-import { onLoad, onShow } from '@dcloudio/uni-app'
+import { computed, nextTick, reactive, ref, watch } from 'vue'
+import { onHide, onLoad, onShow, onUnload } from '@dcloudio/uni-app'
 import { bindScaleByPosition, getFactoryOptions, getLineOptions, getSlotsWithBoundDevices, unbindScale } from '@/api/electronic-scale'
 import ConfirmDialog from '@/components/pda/ConfirmDialog.vue'
 import ScaleBindingFlow from '@/components/pda/ScaleBindingFlow.vue'
@@ -63,12 +77,17 @@ const selectedLine = ref('')
 const positionCode = ref('')
 const macCode = ref('')
 const scanTarget = ref('position')
+const scanInputValue = ref('')
+const scanInputFocus = ref(false)
+const scanInputRef = ref(null)
 const scannedPositionData = ref(null)
 const bindingSubmitting = ref(false)
 const unbindingSubmitting = ref(false)
 const records = ref([])
 let lineOptionsRequestId = 0
 let boundSlotsRequestId = 0
+let scanFocusTimer = null
+let scanInputTimer = null
 
 const confirmDialog = reactive({
 	visible: false,
@@ -88,10 +107,20 @@ const bindingPageTitle = computed(() => {
 	return '\u7535\u5b50\u79e4\u7ed1\u5b9a'
 })
 const canBind = computed(() => !!positionCode.value && !!macCode.value && !bindingSubmitting.value)
+const scanInputEnabled = computed(() => !isUnbindMode.value && bindingStep.value === 'workspace')
 const workspaceRecords = computed(() => {
 	return records.value.filter((item) => item.factoryId === selectedFactory.value && item.lineId === selectedLine.value && item.status === 'bound')
 })
 const confirmButtonText = computed(() => (confirmDialog.action === 'unbind' ? '\u786e\u8ba4\u89e3\u7ed1' : '\u786e\u8ba4'))
+
+watch(scanInputEnabled, (enabled) => {
+	if (enabled) {
+		restoreScanFocus()
+		return
+	}
+
+	pauseScanInput()
+}, { immediate: true })
 
 onLoad((options = {}) => {
 	pageMode.value = options.mode === 'unbind' ? 'unbind' : 'bind'
@@ -110,6 +139,15 @@ onShow(() => {
 	if (bindingStep.value === 'workspace') {
 		loadBoundDeviceSlots()
 	}
+	restoreScanFocus()
+})
+
+onHide(() => {
+	pauseScanInput()
+})
+
+onUnload(() => {
+	pauseScanInput()
 })
 
 function ensureAuth() {
@@ -287,6 +325,75 @@ async function loadBoundDeviceSlots() {
 function activateScanTarget(target) {
 	if (target !== 'position' && target !== 'mac') return
 	scanTarget.value = target
+	restoreScanFocus(80)
+}
+
+function clearScanFocusTimer() {
+	if (scanFocusTimer) {
+		clearTimeout(scanFocusTimer)
+		scanFocusTimer = null
+	}
+}
+
+function clearScanInputTimer() {
+	if (scanInputTimer) {
+		clearTimeout(scanInputTimer)
+		scanInputTimer = null
+	}
+}
+
+function restoreScanFocus(delay = 200) {
+	clearScanFocusTimer()
+	if (!scanInputEnabled.value) {
+		scanInputFocus.value = false
+		return
+	}
+
+	scanFocusTimer = setTimeout(() => {
+		scanFocusTimer = null
+		if (!scanInputEnabled.value) return
+
+		scanInputFocus.value = false
+		nextTick(() => {
+			if (scanInputEnabled.value) {
+				scanInputFocus.value = true
+			}
+		})
+	}, delay)
+}
+
+function pauseScanInput() {
+	clearScanFocusTimer()
+	clearScanInputTimer()
+	scanInputValue.value = ''
+	scanInputFocus.value = false
+}
+
+function handleScanBlur() {
+	scanInputFocus.value = false
+	restoreScanFocus(300)
+}
+
+function handleScanInput() {
+	if (!scanInputEnabled.value) return
+
+	clearScanInputTimer()
+	scanInputTimer = setTimeout(() => {
+		if (scanInputValue.value.trim()) {
+			handleScanConfirm()
+		}
+	}, 300)
+}
+
+function handleScanConfirm() {
+	clearScanInputTimer()
+
+	const rawValue = scanInputValue.value.trim()
+	scanInputValue.value = ''
+	if (!rawValue || !scanInputEnabled.value) return
+
+	applyScanValue(rawValue)
+	restoreScanFocus()
 }
 
 function parseScanData(rawData) {
@@ -313,6 +420,7 @@ function applyScanValue(rawValue) {
 
 	positionCode.value = parsedValue
 	scannedPositionData.value = null
+	scanTarget.value = 'mac'
 	showToast('\u4f4d\u7f6e\u626b\u7801\u6210\u529f')
 }
 
@@ -439,28 +547,6 @@ function switchLine() {
 	resetBindingForm()
 }
 
-function openScanner(target = scanTarget.value) {
-	if (isUnbindMode.value) return
-	activateScanTarget(target)
-	if (bindingStep.value !== 'workspace') return
-
-	uni.scanCode({
-		onlyFromCamera: true,
-		success: (result) => {
-			const rawValue = String(result.result || '').trim()
-			if (!rawValue) {
-				showToast('\u672a\u8bc6\u522b\u5230\u626b\u7801\u5185\u5bb9')
-				return
-			}
-			applyScanValue(rawValue)
-		},
-		fail: (error) => {
-			if (error && /cancel/i.test(String(error.errMsg || ''))) return
-			showToast('\u626b\u7801\u5931\u8d25')
-		}
-	})
-}
-
 async function confirmBind() {
 	if (isUnbindMode.value) {
 		return
@@ -507,6 +593,18 @@ page {
 	min-height: 100vh;
 	background: linear-gradient(180deg, #f7fbff 0%, #eef3f8 38%, #e7edf5 100%);
 	position: relative;
+}
+
+.hidden-scan-input {
+	position: fixed;
+	bottom: 0;
+	left: -2000rpx;
+	width: 10rpx;
+	height: 10rpx;
+	z-index: -1;
+	opacity: 0;
+	pointer-events: none;
+	caret-color: transparent;
 }
 </style>
 
