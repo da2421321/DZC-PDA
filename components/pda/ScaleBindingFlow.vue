@@ -379,7 +379,6 @@ function formatRecordTime(value) {
 .scan-row {
 	display: flex;
 	align-items: center;
-	gap: 14rpx;
 }
 
 .scan-row.active .scan-input {
@@ -416,6 +415,7 @@ function formatRecordTime(value) {
 .scan-btn {
 	width: 104rpx;
 	height: 88rpx;
+	margin-left: 14rpx;
 	border-radius: 24rpx;
 	background: #eff6ff;
 	border: 2rpx solid #bfdbfe;

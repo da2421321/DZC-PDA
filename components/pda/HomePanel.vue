@@ -119,13 +119,14 @@ const brandSubtitle = '\u683c\u745e\u54f2\u00b7\u7ec7\u5faa\u73af'
 .card-container {
 	display: flex;
 	flex-wrap: wrap;
-	gap: 32rpx;
+	justify-content: space-between;
 }
 
 .function-card {
 	width: calc((100% - 32rpx) / 2);
 	min-height: 280rpx;
 	padding: 32rpx;
+	margin-bottom: 32rpx;
 	box-sizing: border-box;
 	border-radius: 32rpx;
 	display: flex;
